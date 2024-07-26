@@ -1,6 +1,6 @@
-# CD4 back-calculation
+# HIV back-calculation model
 
-This repository contains the necessary code to implement the CD4-staged back-calculation model, a Bayesian, discrete-time, multi-state model used to estimate HIV incidence from diagnosis data in the United Kingdom.
+This repository contains the necessary code to implement the CD4-staged HIV back-calculation model, a Bayesian, discrete-time, multi-state model used to estimate HIV incidence from diagnosis data in the United Kingdom.
 
 ## Background
 
