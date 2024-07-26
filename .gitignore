@@ -1,0 +1,18 @@
+# ignore specific directories
+data/
+figures/
+
+# Ignore specific extensions
+*.RData
+*.rds
+*.exe
+*.png
+*.html
+*.xlsx
+*.pdf
+*.csv
+
+# Allow initial data
+!data/init_ad.RData
+!data/test_data_ad.RData
+!data/test_data_ai.RData
