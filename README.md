@@ -35,7 +35,7 @@ For each model there are several R scripts that need to be run in sequence to fi
 - `r/install_packages.R` installs the necessary R packages;
 - `r/run_ai.R` and `r/run_ad.R` run the age-independent/age-dependent model, using `rstan` with three chains, see below for the different Stan models which can be used;
 - the `ShinyStan` package allows for inspection of the resulting trace plots and model fit;
-- `r/process_ai.R`and `r/process_ad.R` process the fitted model, using post-hoc methods to generate the required posterior datasets;
+- `r/process_ad.R` processes the fitted age-dependent model, using post-hoc methods to generate the required posterior datasets;
 - `r/plots_ai.R` and `r/plots_ad.R` contain `ggplot2` code to visualise several quantities of interest;
 - `r/future_pred.R` contains code to generate projected estimates of HIV incidence by extrapolating the fitted incidence splines forward.
 

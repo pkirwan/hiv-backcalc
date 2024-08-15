@@ -13,7 +13,7 @@ library(Rcpp)
 library(RcppArmadillo)
 
 # load the functions to process the output
-source(here("r/process_ad_functions.R"))
+source(here("r/ad_functions.R"))
 
 ## Load results from stan model
 load(here("data/postsim_ad.RData"))

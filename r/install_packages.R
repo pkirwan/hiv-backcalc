@@ -5,10 +5,11 @@
 install.packages("pak")
 
 pak::pkg_install(
-    c(
-        "abind", "bayesplot", "data.table", "future.apply", "future.callr",
-        "here", "httpgd", "jsonlite", "knitr", "languageserver", "lintr", "mgcv",
-        "nanoparquet", "parallel", "patchwork", "posterior", "purrr", "Rcpp",
-        "RcppArmadillo", "readstata13", "rmarkdown", "rstan", "scales", "styler", "tidyverse"
-    )
+  c(
+    "abind", "bayesplot", "BH", "data.table", "future.apply", "future.callr",
+    "here", "httpgd", "jsonlite", "knitr", "languageserver", "lintr", "mgcv",
+    "nanoparquet", "parallel", "patchwork", "posterior", "purrr", "Rcpp", "StanHeaders",
+    "RcppArmadillo", "RcppEigen", "readstata13", "rmarkdown", "rstan", "scales", "styler",
+    "tidyverse"
+  )
 )

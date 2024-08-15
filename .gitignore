@@ -1,5 +1,5 @@
 # ignore specific directories
-data/
+data/*
 figures/
 
 # Ignore specific extensions
@@ -11,8 +11,9 @@ figures/
 *.xlsx
 *.pdf
 *.csv
+*.bug
 
 # Allow initial data
-!data/init_ad.RData
 !data/test_data_ad.RData
 !data/test_data_ai.RData
+r/simulate_data.R

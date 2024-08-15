@@ -1,5 +1,63 @@
 ## ################# FUNCTION DEFINITIONS
 
+build_ad <- function(data, model_id = 4, data_id = 6) {
+
+  # libraries
+  library(mgcv)
+  library(rstan)
+
+  if (!model_id %in% c(1:10)) stop("model_id incorrectly specified")
+
+  if (model_id == 1) model.txt <- "ptens_quar_nourep.stan"
+  if (model_id == 2) model.txt <- "ptens_quar_nourep_aidiag1.stan"
+  if (model_id == 3) model.txt <- "ptens_quar_agediag4_nourep.stan"
+  # if(model_id==4) model.txt <- "ptens_quar_agediag5_nourep.stan"
+  if (model_id == 4) model.txt <- "tps_quar_agediag5_nourep.stan"
+  if (model_id == 5) model.txt <- "ptens_quar_agediag_nourep.stan"
+  if (model_id == 6) model.txt <- "ptens_quar_agediag1_nourep.stan"
+  if (model_id == 7) model.txt <- "ptens_quar_agediag2_nourep.stan"
+  if (model_id == 8) model.txt <- "ptens_quar_agediag3_nourep.stan"
+
+  # spl.file.new <- here("bug/ptens_10_8.bug")
+  spl.file.new <- here("bug/tps_80.bug")
+
+  ## mgcv splines specifications
+  ## dummy data
+  tmp <- runif(data$nquar * data$nage)
+
+  yrs <- 1:data$nquar ## yrs is actually quarters, but convenient to call it like his
+  ages <- 1:data$nage
+
+  ## Creating a dataset for jagam
+  jags.data <- list(
+    age = rep(ages, each = data$nquar),
+    yrs = rep(yrs, times = data$nage),
+    D = tmp
+  )
+
+  m.list <- list(c(2, 1), c(2, 1))
+  jagam.out <- jagam(D ~ te(yrs, age, bs = c("ps", "ps"), k = c(10, 8), m = m.list),
+    family = gaussian, data = jags.data,
+    file = spl.file.new, diagonalize = TRUE
+  )
+
+  # append to the data
+  data$X <- jagam.out$jags.data$X
+  data$ninfpars <- ncol(jagam.out$jags.data$X)
+  data$S1 <- jagam.out$jags.data$S1
+
+  if (model_id %in% c(2:6)) pars_save <- c("beta", "lambda", "vardelta", "d", "alpha") ## saving age-specific intercept dx parameters
+  if (model_id %in% c(8)) pars_save <- c("beta", "lambda", "lambda_d1", "lambda_d2", "lambda_d3", "lambda_d4", "d", "delta1", "delta2", "delta3", "delta4")
+
+  stan_model <- stan_model(file = here("stan", model.txt))
+
+  return(list(
+    "stan_data" = data,
+    "stan_model" = stan_model,
+    "pars_save" = pars_save
+  ))
+}
+
 ### Function to produce consistent output for each scenario
 summary.fct <- function(x) {
   ## gives 95% credible intervals

@@ -3,10 +3,15 @@
 here::i_am("r/run_ai.R")
 
 library(here)
-library(future.callr)
-plan(callr)
+library(rstan)
 
-source(here("r/run_ai_functions.R"))
+# rstan options
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+
+source(here("r/ai_functions.R"))
+
+# quarterly data
 load(here("data/test_data_ai.RData"))
 
 # Incidence models
@@ -16,6 +21,29 @@ load(here("data/test_data_ai.RData"))
 ## 4) Cubic B-spline with a first order difference penalty (Eilers and Marx 1996)  - 10 knots
 ## 5) GP with 0 mean and quadratic exponential kernel
 
-postsim_ai <- main_ai(stan_data, incidence_model = 3)
+# Diagnosis models
+## 1) Random walk
+## 2) Random walk with added (state-specific) linear term giving a temporal trend
+## 3) RW ?
 
-save(postsim_ai, file = here("data/postsim_ai.RData"))
+# build_ai() selects the correct model code, generates a jagam design matrix, and builds the model
+model <- build_ai(data = test_data_ai, incidence_model = 3, diagnosis_model = 1)
+
+# sample from the backcalculation model
+fit <- sampling(
+  object = model$stan_model,
+  data = model$stan_data,
+  iter = 2000,
+  chains = 4,
+  seed = sample.int(.Machine$integer.max, 1),
+  pars = model$pars_save,
+  control = list(adapt_delta = 0.95),
+  save_warmup = FALSE
+)
+
+model_fit_ai <- as.matrix(fit)
+
+# post_process_backcalc() processes the model samples and returns a list of derived outputs
+postproc_ai <- post_process_backcalc(model_fit_ai)
+
+save(list = c(model_fit_ai, postproc_ai), file = here("data/postproc_ai.RData"))
