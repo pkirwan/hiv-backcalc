@@ -10,13 +10,13 @@ library(tidyverse)
 load(here("data/postproc_ai.RData"))
 
 # tables
-hiv_2022_rw$undiag_prev |>
+postproc_ai$undiag_prev |>
     filter(year %% 1 == 0.75) |>
     mutate(year = year - 0.75) |>
     filter(year > 2004) |>
     pivot_wider(names_from = "year", values_from = "value")
 
-hiv_2022_rw$incidence_annual |>
+postproc_ai$incidence_annual |>
     filter(year > 2004) |>
     pivot_wider(names_from = "year", values_from = "value")
 

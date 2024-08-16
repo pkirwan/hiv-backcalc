@@ -46,4 +46,4 @@ model_fit_ai <- as.matrix(fit)
 # post_process_backcalc() processes the model samples and returns a list of derived outputs
 postproc_ai <- post_process_backcalc(model_fit_ai, test_data_ai)
 
-save(list = c(model_fit_ai, postproc_ai), file = here("data/postproc_ai.RData"))
+save(model_fit_ai, postproc_ai, file = here("data/postproc_ai.RData"))
