@@ -114,7 +114,7 @@ post_process_backcalc <- function(model_fit, data, start_yr = 1995, seed = NA) {
   plan(tweak(multicore, workers = 4))
 
   # source rcpp and r functions
-  Rcpp::sourceCpp(here("cpp/backcalcfns.cpp"))
+  Rcpp::sourceCpp(here("cpp/AI_backcalcfns.cpp"))
 
   if (is.na(seed)) {
     seed <- sample.int(.Machine$integer.max, 1)
