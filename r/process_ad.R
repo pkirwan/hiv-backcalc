@@ -16,7 +16,7 @@ library(RcppArmadillo)
 source(here("r/ad_functions.R"))
 
 ## Load results from stan model
-load(here("data/postsim_ad.RData"))
+load(here("data/postproc_ad.RData"))
 
 ############################################################# DATA PROCESSING ####################################################################
 
@@ -28,15 +28,14 @@ out <- list()
 ## i.e. nquar if model quarterly
 ## or nyr if model yearly
 ## is.null allows distinction between quarter and years
-nt <- ifelse(is.null(stan.data$nquar) == FALSE, stan.data$nquar, stan.data$nyr)
+nt <- ifelse(is.null(model$stan_data$nquar) == FALSE, model$stan_data$nquar, model$stan_data$nyr)
 
-nage <- stan.data$nage
+nage <- model$stan_data$nage
 
 ### Specifications
-out$model <- model.ind
-out$data <- data.rm + 1 # tentatively set data.rm <- 0
+# out$data <- 1 # tentatively set data.rm <- 0
 out$nt <- nt
-out$data.id <- data.id
+# out$data.id <- data.id
 
 ### Fit summaries
 fit.mat <- as.matrix(fit)
@@ -45,7 +44,7 @@ fit.summ <- summary(fit)[[1]]
 ### Flags for the model considered
 ## Is this quarterly? Yearly?
 ## AgeDx Probs? or not
-quar.flag <- ifelse(is.null(stan.data$nquar) == FALSE, TRUE, FALSE)
+quar.flag <- ifelse(is.null(model$stan_data$nquar) == FALSE, TRUE, FALSE)
 ageprobs.flag <- ifelse(length(grep("d\\[", colnames(fit.mat))) == nt * 4, FALSE, TRUE)
 ageprobs.spl.flag <- ifelse(length(grep("d\\[", colnames(fit.mat))) == nt * 4 * nage, TRUE, FALSE)
 urep.flag <- ifelse(("under_rep" %in% colnames(fit.mat)) == TRUE, TRUE, FALSE)
@@ -73,7 +72,7 @@ out$time <- max(apply(get_elapsed_time(fit), 1, sum))
 
 beta.ind <- grep("beta", colnames(fit.mat))
 lambda.ind <- grep("lambda", colnames(fit.mat))
-x <- stan.data$X
+x <- model$stan_data$X
 infs <- t(apply(fit.mat[, beta.ind], 1, function(y) x %*% y))
 
 if (length(lambda.ind) > 1) {
@@ -226,15 +225,15 @@ if (!ageprobs.flag & !quar.flag & !ageprobs.spl.flag) {
 environment(d.mat.iter) <- environment()
 
 ## GOODNESS OF FIT
-exp.diags <- lapply(1:nrow(fit.mat), function(i) gof_iter_fct(exp(infs[i, ]), d.mat.iter(fit.mat, i, age.dx.flag = ageprobs.flag, age.dx.spl.flag = ageprobs.spl.flag, nt), stan.data$q, stan.data$init_prev, nt, nage))
-exp.prev <- lapply(1:nrow(fit.mat), function(i) prev_iter_fct(exp(infs[i, ]), d.mat.iter(fit.mat, i, age.dx.flag = ageprobs.flag, age.dx.spl.flag = ageprobs.spl.flag, nt), stan.data$q, stan.data$init_prev, nt, nage))
+exp.diags <- lapply(1:nrow(fit.mat), function(i) gof_iter_fct(exp(infs[i, ]), d.mat.iter(fit.mat, i, age.dx.flag = ageprobs.flag, age.dx.spl.flag = ageprobs.spl.flag, nt), model$stan_data$q, model$stan_data$init_prev, nt, nage))
+exp.prev <- lapply(1:nrow(fit.mat), function(i) prev_iter_fct(exp(infs[i, ]), d.mat.iter(fit.mat, i, age.dx.flag = ageprobs.flag, age.dx.spl.flag = ageprobs.spl.flag, nt), model$stan_data$q, model$stan_data$init_prev, nt, nage))
 
 ### List to array (easier to handle)
 exp.diags.arr <- simplify2array(exp.diags)
 exp.prev.arr <- simplify2array(exp.prev)
 
 ### Expected number of CD4
-nCD4 <- apply(stan.data$CD4, c(1, 2), sum)
+nCD4 <- apply(model$stan_data$CD4, c(1, 2), sum)
 CD4.st1 <- simplify2array(lapply(1:nrow(fit.mat), function(i) nCD4 * (exp.diags.arr[, , 1, i] / (exp.diags.arr[, , 1, i] + exp.diags.arr[, , 2, i] + exp.diags.arr[, , 3, i] + exp.diags.arr[, , 4, i]))))
 CD4.st2 <- simplify2array(lapply(1:nrow(fit.mat), function(i) nCD4 * (exp.diags.arr[, , 2, i] / (exp.diags.arr[, , 1, i] + exp.diags.arr[, , 2, i] + exp.diags.arr[, , 3, i] + exp.diags.arr[, , 4, i]))))
 CD4.st3 <- simplify2array(lapply(1:nrow(fit.mat), function(i) nCD4 * (exp.diags.arr[, , 3, i] / (exp.diags.arr[, , 1, i] + exp.diags.arr[, , 2, i] + exp.diags.arr[, , 3, i] + exp.diags.arr[, , 4, i]))))
@@ -494,8 +493,8 @@ if (quar.flag) {
 # d.mat <- fit.mat[,d.ind]
 #
 # ### the call depends on model... maybe include nac in fct
-# t.to.d <- t_to_d(nt, nage, 4, n_ind_sim=20, d.mat, stan.data$q)
-# snaps <- snap(nt, nage, 4, n_ind_sim=20, t_max=150,  d.mat, stan.data$q)
+# t.to.d <- t_to_d(nt, nage, 4, n_ind_sim=20, d.mat, model$stan_data$q)
+# snaps <- snap(nt, nage, 4, n_ind_sim=20, t_max=150,  d.mat, model$stan_data$q)
 #
 # t.to.d.dist <- apply(t.to.d[[1]], c(1,2), quantile, probs=c(0.1,0.25,0.5,0.75,0.9))
 #
