@@ -35,4 +35,4 @@ fit <- sampling(
   control = list(adapt_delta = 0.8)
 )
 
-save(model, fit, file = here("data/postproc_ad.RData"))
+save(model, fit, file = here("data/postsim_ad.RData"))

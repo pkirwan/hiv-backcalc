@@ -12,7 +12,7 @@ save.flag <- TRUE
 mod.to.plot <- 4 ## Describes the type of spline used to model incidence
 data.to.plot <- 6 ## Describes the exclusion criteria used in compiling the data.
 data.id <- 1 ### data.rm index. data.id = 1 considers all data.
-yrs.to.plot <- 2012:2022 ## Which years do we want to feature in the plots
+yrs.to.plot <- 1995:2014 ## Which years do we want to feature in the plots
 
 ### Loading results and diagnosis data
 load(here("data/postproc_ad.RData"))
@@ -45,18 +45,18 @@ plt.y <- substr(yrs.to.plot, 3, 4)
 m <- models.ind[ind.to.plot]
 
 # add named values
-data.95$num.quarters <- data.95$nquar # PK
-data.95$num.years <- data.95$num.quarters / 4
-data.95$AIDS.diagnoses <- data.95$AIDS
-data.95$HIV.diagnoses <- data.95$HIV
-data.95$CD4.cell.proportions <- data.95$CD4
+test_data_ad$num.quarters <- test_data_ad$nquar # PK
+test_data_ad$num.years <- test_data_ad$num.quarters / 4
+test_data_ad$AIDS.diagnoses <- test_data_ad$AIDS
+test_data_ad$HIV.diagnoses <- test_data_ad$HIV
+test_data_ad$CD4.cell.proportions <- test_data_ad$CD4
 
 ### Data manipultation
-yr.dx <- tapply(rowSums(data.95$HIV.diagnoses + data.95$AIDS.diagnoses), rep(1:length(yrs), each = 4), sum)
-yr.15.dx <- tapply(rowSums((data.95$HIV.diagnoses + data.95$AIDS.diagnoses)[, 1:10]), rep(1:length(yrs), each = 4), sum)
-yr.25.dx <- tapply(rowSums((data.95$HIV.diagnoses + data.95$AIDS.diagnoses)[, 11:20]), rep(1:length(yrs), each = 4), sum)
-yr.35.dx <- tapply(rowSums((data.95$HIV.diagnoses + data.95$AIDS.diagnoses)[, 21:30]), rep(1:length(yrs), each = 4), sum)
-yr.45.dx <- tapply(rowSums((data.95$HIV.diagnoses + data.95$AIDS.diagnoses)[, 31:52]), rep(1:length(yrs), each = 4), sum)
+yr.dx <- tapply(rowSums(test_data_ad$HIV.diagnoses + test_data_ad$AIDS.diagnoses), rep(1:length(yrs), each = 4), sum)
+yr.15.dx <- tapply(rowSums((test_data_ad$HIV.diagnoses + test_data_ad$AIDS.diagnoses)[, 1:10]), rep(1:length(yrs), each = 4), sum)
+yr.25.dx <- tapply(rowSums((test_data_ad$HIV.diagnoses + test_data_ad$AIDS.diagnoses)[, 11:20]), rep(1:length(yrs), each = 4), sum)
+yr.35.dx <- tapply(rowSums((test_data_ad$HIV.diagnoses + test_data_ad$AIDS.diagnoses)[, 21:30]), rep(1:length(yrs), each = 4), sum)
+yr.45.dx <- tapply(rowSums((test_data_ad$HIV.diagnoses + test_data_ad$AIDS.diagnoses)[, 31:52]), rep(1:length(yrs), each = 4), sum)
 
 ## ### Grepping number of MSM
 ## x <- which(msm.number.data$Age=="Total" & msm.number.data$Region=="Total")

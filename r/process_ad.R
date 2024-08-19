@@ -16,7 +16,7 @@ library(RcppArmadillo)
 source(here("r/ad_functions.R"))
 
 ## Load results from stan model
-load(here("data/postproc_ad.RData"))
+load(here("data/postsim_ad.RData"))
 
 ############################################################# DATA PROCESSING ####################################################################
 
