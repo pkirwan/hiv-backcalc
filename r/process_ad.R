@@ -94,15 +94,15 @@ if (length(sigma2.ind) != 0) out$sigma2 <- fit.mat[, sigma2.ind]
 ## Posterior mean for all time and ages
 out$infs.all <- apply(infs, 2, summary.fct)
 
-### Time profile and age-specific time profile
-## yearly
+# Time profile and age-specific time profile
+# yearly
 out$infs <- infs.fct(infs, 15, 66, nt, type = "time", qt.flag = quar.flag)
 out$infs.1524 <- infs.fct(infs, 15, 24, nt, type = "time", qt.flag = quar.flag)
 out$infs.2534 <- infs.fct(infs, 25, 34, nt, type = "time", qt.flag = quar.flag)
 out$infs.3544 <- infs.fct(infs, 35, 44, nt, type = "time", qt.flag = quar.flag)
 out$infs.45 <- infs.fct(infs, 45, 66, nt, type = "time", qt.flag = quar.flag)
 
-## quarterly
+# quarterly
 out$infs.qt <- infs.fct.qt(infs, 15, 66, nt, qt.flag = quar.flag)
 out$infs.qt.1524 <- infs.fct.qt(infs, 15, 24, nt, qt.flag = quar.flag)
 out$infs.qt.2534 <- infs.fct.qt(infs, 25, 34, nt, qt.flag = quar.flag)
