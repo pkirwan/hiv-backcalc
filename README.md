@@ -66,7 +66,7 @@ $$
 \end{align*}
 $$
 
-- 'stan/ptens_quar_agediag2_nourep.stan' is the Stan model code for the age-dependent model with diagnosis probabilities evolving as age- and state-specific random walks.
+- `stan/ptens_quar_agediag2_nourep.stan` is the Stan model code for the age-dependent model with diagnosis probabilities evolving as age- and state-specific random walks.
 
 $$
 \begin{align*}
@@ -78,7 +78,8 @@ $$
 $$
 
 - `stan/ptens_quar_agediag3_nourep.stan` is the Stan model code for the age-dependent model with diagnosis probabilities smoothed using an approximation to an optimal thin-plate spline containing the same number of knots as the same type of spline used to smooth the incidence.
-- `stan/ptens_quar_agediag4_nourep.stan}` is the Stan model code for the age-dependent model with age-dependent diagnosis probabilities, (state-specific) random-walk with age-specific offset.
+
+- `stan/ptens_quar_agediag4_nourep.stan` is the Stan model code for the age-dependent model with age-dependent diagnosis probabilities, (state-specific) random-walk with age-specific offset.
 
 $$
 \begin{align*}
