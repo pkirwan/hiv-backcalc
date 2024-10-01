@@ -18,13 +18,13 @@ load(here("data/test_data_ad.RData"))
 ## 1) Ptens - qt, no age diag (standard)
 ## 2) Ptens - qt, no age diag, but linear trend
 ## 3) Ptens - qt, age diag 4: intercept - age specific
-## 4) Ptens - qt, age diag 5: intercept - age and time specific
+## 4) Ptens - qt, age diag 5: intercept - age and state specific
 ## 5) Ptens - qt, age diag: time trend - age specific
 ## 6) Ptens - qt, age diag 1: time trend - age and state specific
 ## 7) Ptens - qt, age diag 2, no urep - indept rw for each age class
 ## 8) Ptens - qt, age diag 3, no urep - splines for dx probs
 
-model <- build_ad(data = test_data_ad, model_id = 4, data_id = 6)
+model <- build_ad(data = stan_data, model_id = 5, data_id = 6)
 
 fit <- sampling(
   object = model$stan_model,

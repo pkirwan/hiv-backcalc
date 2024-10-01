@@ -12,7 +12,7 @@ rstan_options(auto_write = TRUE)
 source(here("r/ai_functions.R"))
 
 # quarterly data
-load(here("data/test_data_ai.RData"))
+load(here("data/test_data_rita.RData"))
 
 # Incidence models
 ## 1) Random walk starting in 1978
@@ -27,7 +27,7 @@ load(here("data/test_data_ai.RData"))
 ## 3) RW ?
 
 # build_ai() selects the correct model code, generates a jagam design matrix, and builds the model
-model <- build_ai(data = stan_data_ai, incidence_model = 3, diagnosis_model = 1)
+model <- build_ai(data = stan_data_rita, incidence_model = 6, diagnosis_model = 1)
 
 # sample from the backcalculation model
 fit <- sampling(
@@ -41,9 +41,9 @@ fit <- sampling(
   save_warmup = FALSE
 )
 
-model_fit <- as.matrix(fit)
+model_fit_rita <- as.matrix(fit)
 
 # post_process_backcalc() processes the model samples and returns a list of derived outputs
-postproc_ai <- post_process_backcalc(model, model_fit)
+postproc_rita <- post_process_backcalc(model, model_fit_rita, start_yr = 2011)
 
-save(model_fit, postproc_ai, file = here("data/postproc_ai.RData"))
+save(model_fit_rita, postproc_rita, file = here("data/postproc_rita.RData"))

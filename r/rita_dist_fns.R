@@ -1,155 +1,3 @@
-build_ai <- function(
-    data,
-    incidence_model = 1,
-    diagnosis_model = 1) {
-  # libraries
-  library(mgcv)
-  library(rstan)
-
-  # rstan options
-  options(mc.cores = parallel::detectCores())
-  rstan_options(auto_write = TRUE)
-
-  # Incidence models
-  ## 1) Random walk starting in 1978
-  ## 2) Random walk starting in 1995
-  ## 3) Thin plate regression spline with shrinkage (Wood 2003 + Marra and Wood 2011) - 10 knots
-  ## 4) Cubic B-spline with a first order difference penalty (Eilers and Marx 1996)  - 10 knots
-  ## 5) GP with 0 mean and quadratic exponential kernel
-
-  # Diagnosis models
-  ## 1) Random walk
-  ## 2) Random walk with added (state-specific) linear term giving a temporal trend
-  ## 3) RW ?
-
-  if (incidence_model == 1) {
-    model_code <- "RW1978"
-    pars_save <- c("gamma", "var1", "var2", "vardelta", "d", "exp_HIV_dx", "exp_AIDS_dx", "exp_p", "under_rep", "c_78", "c_84", "prev_mat")
-  }
-  if (incidence_model == 2) {
-    model_code <- "RW1995"
-    pars_save <- c("gamma", "var1", "vardelta", "d", "log_lik", "exp_HIV_dx", "exp_AIDS_dx", "exp_p", "prev_mat")
-  }
-  if (incidence_model == 3) {
-    b <- "ts"
-    k <- 10 ## Setting a default number of knots
-    m <- 2 ## Setting the default order of the penalty
-    model_code <- "spl"
-    pars_save <- c("beta", "gamma", "lambda", "sigma", "vardelta", "d", "log_lik", "exp_HIV_dx", "exp_AIDS_dx", "exp_p", "prev_mat")
-  }
-  if (incidence_model == 4) {
-    b <- "bs"
-    k <- 10
-    m <- c(2, 1)
-    model_code <- "spl"
-    pars_save <- c("beta", "gamma", "lambda", "sigma", "vardelta", "d", "log_lik", "exp_HIV_dx", "exp_AIDS_dx", "exp_p", "prev_mat")
-  }
-  if (incidence_model == 5) {
-    data$sigma_sq <- 0.001 ## fixed nugget for gp
-    range01 <- function(x) {
-      (x - min(x)) / (max(x) - min(x))
-    } ## scales inputs of GP to 0-1.
-    data$x <- range01(1:data$nquar)
-    model_code <- "GP"
-    pars_save <- c("gamma", "inv_rho", "eta", "vardelta", "d", "log_lik", "exp_HIV_dx", "exp_AIDS_dx", "exp_p", "prev_mat")
-  }
-  if (incidence_model == 6) {
-    b <- "ts"
-    k <- 10 ## Setting a default number of knots
-    m <- 2 ## Setting the default order of the penalty
-    model_code <- "rita"
-    pars_save <- c("beta", "gamma", "lambda", "sigma", "vardelta", "d", "log_lik", "exp_HIV_dx", "exp_AIDS_dx", "exp_p", "prev_mat")
-  }
-
-  # if(diagnosis_model == 1) nothing to do
-
-  if (diagnosis_model == 2) {
-    model_code <- paste0(model_code, "_linDelta")
-    pars_save <- c(pars_save, "alpha")
-  } else if (diagnosis_model == 3) {
-    model_code <- paste0(model_code, "_incDelta")
-  }
-
-  # Spline models require a design matrix (x), generated using the jagam function from the mgcv package
-  if (incidence_model %in% c(3, 4, 6)) {
-    ## fake data
-    jags_data <- list(
-      qts = 1:data$nquar,
-      D = runif(data$nquar)
-    )
-
-    # This creates the spline object and using a bug file with some stan code
-    # diagonalize = TRUE makes a reparameterization so that the priors are iid normal
-    jagam_out <- jagam(D ~ s(qts, bs = b, k = k, m = m),
-      family = gaussian, data = jags_data,
-      file = here("bug/AI_spl.bug"), diagonalize = TRUE
-    )
-
-    ## Grab the design matrix and augment data
-    data$X <- jagam_out$jags.data$X
-    data$ninfpars <- ncol(data$X)
-  }
-
-
-  ## build the model
-  stan_model <- stan_model(file = here("stan", paste0("AI_", model_code, ".stan")))
-
-  return(list(
-    "stan_data" = data,
-    "stan_model" = stan_model,
-    "pars_save" = pars_save,
-    "incidence_model" = incidence_model,
-    "diagnosis_model" = diagnosis_model
-  ))
-}
-
-post_process_backcalc <- function(model, model_fit, start_yr = 1995, seed = NA) {
-  # libraries
-  library(tidyverse)
-  library(Rcpp)
-  library(RcppArmadillo)
-
-  # Setup for running in parallel using future_sapply
-  # use plan(multicore) as plan(multisession) and plan(callr) do not work well with Rcpp
-  library(future)
-  library(future.apply)
-  plan(tweak(multicore, workers = 4))
-  # allow large globals to be passed to futures
-  options(future.globals.maxSize = 4718592000)
-
-  # source rcpp and r functions
-  if (model$incidence_model == 6){
-    Rcpp::sourceCpp(here("cpp/RITA_backcalcfns.cpp"))
-    source(here("r/rita_dist_fns.R"))
-  } else {
-    Rcpp::sourceCpp(here("cpp/AI_backcalcfns.cpp"))
-  }
-  stan_data <- model$stan_data
-
-  if (is.na(seed)) {
-    seed <- sample.int(.Machine$integer.max, 1)
-  }
-  
-  inf_dist <- future_sapply(1:nrow(model_fit), function(i) get_incidence(stan_data, model_fit, i, seed = seed), future.seed = TRUE)
-  prev_dist <- future_sapply(1:nrow(model_fit), function(i) get_prevalence(stan_data, model_fit, i, seed = seed), future.seed = TRUE)
-
-  incidence <- incidence.df(stan_data, prev_dist, start.yr = start_yr, annual = FALSE)
-  incidence_annual <- incidence.df(stan_data, prev_dist, start.yr = start_yr, annual = TRUE)
-  undiag_prev <- undiag.prev.df(stan_data, prev_dist, inf_dist, start.yr = start_yr)
-  diag_prob <- diag.prob.df(stan_data, model_fit, start.yr = start_yr)
-  diagnoses <- diagnoses.df(stan_data, prev_dist, start.yr = start_yr)
-
-  out <- list(
-    incidence = incidence,
-    incidence_annual = incidence_annual,
-    undiag_prev = undiag_prev,
-    diag_prob = diag_prob,
-    diagnoses = diagnoses
-  )
-
-  return(out)
-}
-
 ############################# INFECTION AND DIAGNOSED PREVALENCE DISTRIBUTION #############################
 
 ### this function generates the HIV.Dx.Infect.Dist and AIDS.Dx.Infect.Dist, by year of diagnosis
@@ -157,14 +5,14 @@ get_incidence <- function(stan_data, fit_mat, i, seed = 1707) {
   output <- list()
 
   n.diag.st <- ncol(stan_data$CD4)
+  n.lat.st <- 7
   n.CD4 <- nrow(stan_data$CD4)
   nquar <- stan_data$nquar
   n.iters <- nrow(fit_mat)
   N.sample <- rowSums(stan_data$CD4)
-  # diags0 <- c(stan_data$CD4[1, ], stan_data$AIDS[1])
 
   if (!exists("init_prev", where = stan_data)) {
-    init.prev <- rep(0, 4) ### This allows modification for initial prevalence
+    init.prev <- rep(0, 7) ### This allows modification for initial prevalence
   } else {
     init.prev <- stan_data$init_prev
   }
@@ -175,18 +23,20 @@ get_incidence <- function(stan_data, fit_mat, i, seed = 1707) {
   d2.ind <- grep("d\\[2,", colnames(fit_mat))
   d3.ind <- grep("d\\[3,", colnames(fit_mat))
   d4.ind <- grep("d\\[4,", colnames(fit_mat))
+  d5.ind <- grep("d\\[5,", colnames(fit_mat))
 
   # these are the diagnosis probabilities for this iteration of the model, for each CD4 state
   d1 <- fit_mat[i, d1.ind]
   d2 <- fit_mat[i, d2.ind]
   d3 <- fit_mat[i, d3.ind]
   d4 <- fit_mat[i, d4.ind]
+  d5 <- fit_mat[i, d5.ind]
 
   # this is the number of new infections for this iteration of the model
   infs.ind <- grep("gamma", colnames(fit_mat))
   temp.h <- exp(fit_mat[i, infs.ind])
 
-  diagnoses <- forward_calculate(init.prev, temp.h, d1 = d1, d2 = d2, d3 = d3, d4 = d4, q = stan_data$q)
+  diagnoses <- forward_calculate(init.prev, temp.h, d1 = d1, d2 = d2, d3 = d3, d4 = d4, d5 = d5, q = stan_data$q)
 
   if ("under_rep" %in% colnames(fit_mat)) {
     under.report <- 1 - fit_mat[i, "under_rep"]
@@ -221,15 +71,31 @@ get_incidence <- function(stan_data, fit_mat, i, seed = 1707) {
 
   output$AIDS.Dx.Infect.Dist <- cbind(0, 0, 0, 0, tempvec) + unreported.AIDS
 
-  for (state in 1:n.diag.st)
-  {
-    d.to.i.temp <- diag_to_infec_wrap1(diagnoses$prevalence, state)
+  collapsed_s1 <- colSums(diagnoses$prevalence[, 1:3, ])
+  dist_s1 <- t(collapsed_s1) / colSums(collapsed_s1)
 
-    HIV.diags <- c(rep(0, nquar - nrow(stan_data$CD4)), stan_data$CD4[, state])
+  for (state in 1) {
+    #prev_list <- array(sapply(1:nquar, function(x) colSums(diagnoses$prevalence[x, 1:3, ])), dim = c(nquar, 1, nquar))
+    d.to.i.temp.1 <- diag_to_infec_wrap1(diagnoses$prevalence, 1) * dist_s1[, 1]
+    d.to.i.temp.2 <- diag_to_infec_wrap1(diagnoses$prevalence, 2) * dist_s1[, 2]
+    d.to.i.temp.3 <- diag_to_infec_wrap1(diagnoses$prevalence, 3) * dist_s1[, 3]
+    d.to.i.temp <- d.to.i.temp.1 + d.to.i.temp.2 + d.to.i.temp.3
+
+    HIV.diags <- c(rep(0, nquar - nrow(stan_data$CD4)), stan_data$CD4[, 1])
 
     set.seed(seed)
     tempvec1 <- sapply((state + 1):nquar, function(x) rmultinom(1, HIV.diags[x], d.to.i.temp[x - state, ]))
-    output$HIV.Dx.Infect.Dist[state, , ] <- output$HIV.Dx.Infect.Dist[state, , ] + cbind(matrix(0, nquar, nquar - ncol(tempvec1)), tempvec1)
+    output$HIV.Dx.Infect.Dist[1, , ] <- output$HIV.Dx.Infect.Dist[1, , ] + cbind(matrix(0, nquar, nquar - ncol(tempvec1)), tempvec1)
+  }
+
+  for (state in 4:n.lat.st) {
+    d.to.i.temp <- diag_to_infec_wrap1(diagnoses$prevalence, state)
+
+    HIV.diags <- c(rep(0, nquar - nrow(stan_data$CD4)), stan_data$CD4[, state - 2])
+
+    set.seed(seed)
+    tempvec1 <- sapply((state + 1):nquar, function(x) rmultinom(1, HIV.diags[x], d.to.i.temp[x - state, ]))
+    output$HIV.Dx.Infect.Dist[state - 2, , ] <- output$HIV.Dx.Infect.Dist[state - 2, , ] + cbind(matrix(0, nquar, nquar - ncol(tempvec1)), tempvec1)
   }
 
   return(output)
@@ -242,6 +108,7 @@ get_prevalence <- function(stan_data, fit_mat, i, seed = 1707) {
   output <- list()
 
   n.diag.st <- ncol(stan_data$CD4) ## number of diagnoses states
+  n.lat.st <- 7
   n.CD4 <- nrow(stan_data$CD4)
   nquar <- stan_data$nquar
   n.iters <- nrow(fit_mat)
@@ -259,16 +126,19 @@ get_prevalence <- function(stan_data, fit_mat, i, seed = 1707) {
   d2.ind <- grep("d\\[2,", colnames(fit_mat))
   d3.ind <- grep("d\\[3,", colnames(fit_mat))
   d4.ind <- grep("d\\[4,", colnames(fit_mat))
+  d5.ind <- grep("d\\[5,", colnames(fit_mat))
 
+  # these are the diagnosis probabilities for this iteration of the model, for each CD4 state
   d1 <- fit_mat[i, d1.ind]
   d2 <- fit_mat[i, d2.ind]
   d3 <- fit_mat[i, d3.ind]
   d4 <- fit_mat[i, d4.ind]
+  d5 <- fit_mat[i, d5.ind]
 
   infs.ind <- grep("gamma", colnames(fit_mat))
   temp.h <- exp(fit_mat[i, infs.ind]) ## picking the infection parameters from chain and iteration of interest
 
-  diagnoses <- forward_calculate(init.prev, temp.h, d1 = d1, d2 = d2, d3 = d3, d4 = d4, q = stan_data$q)
+  diagnoses <- forward_calculate(init.prev, temp.h, d1 = d1, d2 = d2, d3 = d3, d4 = d4, d5 = d5, q = stan_data$q)
 
   output$AIDS.diagnoses <- matrix(rpois(length(diagnoses$AIDS.diagnoses), diagnoses$AIDS.diagnoses), nquar)
   output$HIV.diagnoses <- matrix(rpois(length(diagnoses$HIV.diagnoses), diagnoses$HIV.diagnoses), nquar)
@@ -293,7 +163,7 @@ get_prevalence <- function(stan_data, fit_mat, i, seed = 1707) {
 
   # it appears that the undiagnosed component will only hold data for the most recent year
   set.seed(seed)
-  output$undiagnosed <- matrix(rpois(n = prod(dim(diagnoses$prevalence[nquar, 1:n.diag.st, ])), lambda = diagnoses$prevalence[nquar, 1:n.diag.st, ]), nr = n.diag.st)
+  output$undiagnosed <- matrix(rpois(n = prod(dim(diagnoses$prevalence[nquar, 1:n.lat.st, ])), lambda = diagnoses$prevalence[nquar, 1:n.lat.st, ]), nr = n.lat.st)
 
   Dx.no.CD4 <- stan_data$HIV - c(rep(0, nquar - n.CD4), N.sample) ## Number of CD4 count for every quarter
 
@@ -306,20 +176,40 @@ get_prevalence <- function(stan_data, fit_mat, i, seed = 1707) {
   temp <- array(c(matrix(0, n.diag.st, nquar), temp), dim = c(n.diag.st, nquar, nquar))
 
   output$HIV.Dx.no.CD4 <- apply(temp, 1:2, sum)
-  output$HIV.Dx.CD4 <- matrix(NA, n.diag.st, nquar) ## Initialization needed later
+  output$HIV.Dx.CD4 <- matrix(0, n.diag.st, nquar) ## Initialization needed later
 
   set.seed(seed)
   tempvec <- sapply(5:nquar, function(x) rmultinom(1, stan_data$AIDS[x], d.to.i.AIDS[x, ]))
 
   output$reported.AIDS <- rowSums(tempvec)
-  for (state in 1:n.diag.st)
-  {
-    d.to.i.temp <- diag_to_infec_wrap1(diagnoses$prevalence, state)
-    HIV.diags <- c(rep(0, nquar - nrow(stan_data$CD4)), stan_data$CD4[, state])
+
+  collapsed_s1 <- colSums(diagnoses$prevalence[, 1:3, ])
+  dist_s1 <- t(collapsed_s1) / colSums(collapsed_s1)
+
+  for (state in 1) {
+    #prev_list <- array(sapply(1:nquar, function(x) colSums(diagnoses$prevalence[x, 1:3, ])), dim = c(nquar, 1, nquar))
+    d.to.i.temp.1 <- diag_to_infec_wrap1(diagnoses$prevalence, 1) * dist_s1[, 1]
+    d.to.i.temp.2 <- diag_to_infec_wrap1(diagnoses$prevalence, 2) * dist_s1[, 2]
+    d.to.i.temp.3 <- diag_to_infec_wrap1(diagnoses$prevalence, 3) * dist_s1[, 3]
+    d.to.i.temp <- d.to.i.temp.1 + d.to.i.temp.2 + d.to.i.temp.3
+
+    HIV.diags <- c(rep(0, nquar - nrow(stan_data$CD4)), stan_data$CD4[, 1])
+
     set.seed(seed)
     tempvec1 <- sapply((state + 1):nquar, function(x) rmultinom(1, HIV.diags[x], d.to.i.temp[x - state, ]))
-    output$HIV.Dx.CD4[state, ] <- rowSums(tempvec1)
+    output$HIV.Dx.CD4[1, ] <- output$HIV.Dx.CD4[1, ] + rowSums(tempvec1)
   }
+
+  for (state in 4:n.lat.st) {
+    d.to.i.temp <- diag_to_infec_wrap1(diagnoses$prevalence, state)
+
+    HIV.diags <- c(rep(0, nquar - nrow(stan_data$CD4)), stan_data$CD4[, state - 2])
+
+    set.seed(seed)
+    tempvec1 <- sapply((state + 1):nquar, function(x) rmultinom(1, HIV.diags[x], d.to.i.temp[x - state, ]))
+    output$HIV.Dx.CD4[state - 2, ] <- rowSums(tempvec1)
+  }
+
   return(output)
 }
 
@@ -431,33 +321,39 @@ diag.prob.df <- function(stan_data, fit_mat, start.yr = 1978) {
   d2.ind <- grep("d\\[2,", colnames(fit_mat))
   d3.ind <- grep("d\\[3,", colnames(fit_mat))
   d4.ind <- grep("d\\[4,", colnames(fit_mat))
+  d5.ind <- grep("d\\[5,", colnames(fit_mat))
 
   ### Quantiles of diagnosis
   d1.q <- apply(fit_mat[, d1.ind], 2, quantile, probs = c(0.025, 0.5, 0.975))
   d2.q <- apply(fit_mat[, d2.ind], 2, quantile, probs = c(0.025, 0.5, 0.975))
   d3.q <- apply(fit_mat[, d3.ind], 2, quantile, probs = c(0.025, 0.5, 0.975))
   d4.q <- apply(fit_mat[, d4.ind], 2, quantile, probs = c(0.025, 0.5, 0.975))
+  d5.q <- apply(fit_mat[, d5.ind], 2, quantile, probs = c(0.025, 0.5, 0.975))
 
   year <- seq(start.yr, start.yr + nyr - 0.25, by = 0.25)
 
   d1.q <- t(d1.q) |>
     as.data.frame() |>
-    cbind(year, strata = "CD4>500") |>
+    cbind(year, strata = "Recently acquired") |>
     pivot_longer(c(-year, -strata), names_to = "quartile")
   d2.q <- t(d2.q) |>
     as.data.frame() |>
-    cbind(year, strata = "CD4 350-500") |>
+    cbind(year, strata = "CD4>500") |>
     pivot_longer(c(-year, -strata), names_to = "quartile")
   d3.q <- t(d3.q) |>
     as.data.frame() |>
-    cbind(year, strata = "CD4 200-350") |>
+    cbind(year, strata = "CD4 350-500") |>
     pivot_longer(c(-year, -strata), names_to = "quartile")
   d4.q <- t(d4.q) |>
+    as.data.frame() |>
+    cbind(year, strata = "CD4 200-350") |>
+    pivot_longer(c(-year, -strata), names_to = "quartile")
+  d5.q <- t(d5.q) |>
     as.data.frame() |>
     cbind(year, strata = "CD4<200") |>
     pivot_longer(c(-year, -strata), names_to = "quartile")
 
-  df <- rbind(d1.q, d2.q, d3.q, d4.q)
+  df <- rbind(d1.q, d2.q, d3.q, d4.q, d5.q)
   return(df)
 }
 

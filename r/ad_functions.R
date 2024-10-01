@@ -11,15 +11,13 @@ build_ad <- function(data, model_id = 4, data_id = 6) {
   if (model_id == 1) model.txt <- "ptens_quar_nourep.stan"
   if (model_id == 2) model.txt <- "ptens_quar_nourep_aidiag1.stan"
   if (model_id == 3) model.txt <- "ptens_quar_agediag4_nourep.stan"
-  # if(model_id==4) model.txt <- "ptens_quar_agediag5_nourep.stan"
-  if (model_id == 4) model.txt <- "tps_quar_agediag5_nourep.stan"
+  if (model_id == 4) model.txt <- "ptens_quar_agediag5_nourep.stan"
   if (model_id == 5) model.txt <- "ptens_quar_agediag_nourep.stan"
   if (model_id == 6) model.txt <- "ptens_quar_agediag1_nourep.stan"
   if (model_id == 7) model.txt <- "ptens_quar_agediag2_nourep.stan"
   if (model_id == 8) model.txt <- "ptens_quar_agediag3_nourep.stan"
 
-  # spl.file.new <- here("bug/ptens_10_8.bug")
-  spl.file.new <- here("bug/tps_80.bug")
+  spl.file.new <- here("bug/ptens_10_8.bug")
 
   ## mgcv splines specifications
   ## dummy data
