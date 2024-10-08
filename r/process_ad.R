@@ -16,7 +16,7 @@ library(RcppArmadillo)
 source(here("r/ad_functions.R"))
 
 ## Load results from stan model
-load(here("data/postsim_ad.RData"))
+load(here("data/postsim_ad_1995_2023.RData"))
 
 ############################################################# DATA PROCESSING ####################################################################
 
@@ -47,6 +47,8 @@ fit.summ <- summary(fit)[[1]]
 quar.flag <- ifelse(is.null(model$stan_data$nquar) == FALSE, TRUE, FALSE)
 ageprobs.flag <- ifelse(length(grep("d\\[", colnames(fit.mat))) == nt * 4, FALSE, TRUE)
 ageprobs.spl.flag <- ifelse(length(grep("d\\[", colnames(fit.mat))) == nt * 4 * nage, TRUE, FALSE)
+delta.flag <- ifelse(length(grep("delta1", colnames(fit.mat))) > 0, TRUE, FALSE)
+rita.flag <- ifelse(length(grep("d\\[1,5", colnames(fit.mat))) > 0, TRUE, FALSE)
 urep.flag <- ifelse(("under_rep" %in% colnames(fit.mat)) == TRUE, TRUE, FALSE)
 
 out$quar.flag <- quar.flag
@@ -139,8 +141,6 @@ out$trend.3.2534 <- trend.fct(infs, 25, 34, nt, last.yr = 3, qt.flag = quar.flag
 out$trend.3.3544 <- trend.fct(infs, 35, 44, nt, last.yr = 3, qt.flag = quar.flag)
 out$trend.3.45 <- trend.fct(infs, 45, 66, nt, last.yr = 3, qt.flag = quar.flag)
 
-
-
 ### Diagnoses probabilities
 if (!ageprobs.flag) {
   d1.ind <- grep("d\\[1,", colnames(fit.mat))
@@ -187,6 +187,18 @@ if (!ageprobs.flag) {
     out$d2.q.o <- apply(fit.mat[, d2.ind.o], 2, summary.fct)
     out$d3.q.o <- apply(fit.mat[, d3.ind.o], 2, summary.fct)
     out$d4.q.o <- apply(fit.mat[, d4.ind.o], 2, summary.fct)
+
+    if (rita.flag) {
+      d5.ind.y <- grep("d\\[1,5", colnames(fit.mat))
+      d5.ind.my <- grep("d\\[2,5", colnames(fit.mat))
+      d5.ind.mo <- grep("d\\[3,5", colnames(fit.mat))
+      d5.ind.o <- grep("d\\[4,5", colnames(fit.mat))
+
+      out$d5.q.y <- apply(fit.mat[, d5.ind.y], 2, summary.fct)
+      out$d5.q.my <- apply(fit.mat[, d5.ind.my], 2, summary.fct)
+      out$d5.q.mo <- apply(fit.mat[, d5.ind.mo], 2, summary.fct)
+      out$d5.q.o <- apply(fit.mat[, d5.ind.o], 2, summary.fct)
+    }
   } else {
     d1.ind <- grep("d\\[1,", colnames(fit.mat))
     d2.ind <- grep("d\\[2,", colnames(fit.mat))
@@ -203,10 +215,34 @@ if (!ageprobs.flag) {
   }
 }
 
+if (delta.flag) {
+  delta1.ind <- grep("delta1", colnames(fit.mat))
+  delta2.ind <- grep("delta2", colnames(fit.mat))
+  delta3.ind <- grep("delta3", colnames(fit.mat))
+  delta4.ind <- grep("delta4", colnames(fit.mat))
+
+  out$delta1.q <- apply(fit.mat[, delta1.ind], 2, summary.fct)
+  out$delta2.q <- apply(fit.mat[, delta2.ind], 2, summary.fct)
+  out$delta3.q <- apply(fit.mat[, delta3.ind], 2, summary.fct)
+  out$delta4.q <- apply(fit.mat[, delta4.ind], 2, summary.fct)
+
+  if (rita.flag) {
+    delta5.ind <- grep("delta5", colnames(fit.mat))
+    out$delta5.q <- apply(fit.mat[, delta5.ind], 2, summary.fct)
+  }
+} else {
+  # deltas are the same for every age group so only derive once
+  out$delta1.q <- apply(log((fit.mat[, d1.ind.y]) / (1 - fit.mat[, d1.ind.y])) - fit.mat[, alpha.ind][, 1], 2, summary.fct)
+  out$delta2.q <- apply(log((fit.mat[, d2.ind.y]) / (1 - fit.mat[, d2.ind.y])) - fit.mat[, alpha.ind][, 2], 2, summary.fct)
+  out$delta3.q <- apply(log((fit.mat[, d3.ind.y]) / (1 - fit.mat[, d3.ind.y])) - fit.mat[, alpha.ind][, 3], 2, summary.fct)
+  out$delta4.q <- apply(log((fit.mat[, d4.ind.y]) / (1 - fit.mat[, d4.ind.y])) - fit.mat[, alpha.ind][, 4], 2, summary.fct)
+}
 
 ## Loading Rcpp functions
 ## for post-simulating the epidemics
-if (!ageprobs.flag & !quar.flag & !ageprobs.spl.flag) {
+if (rita.flag) {
+  Rcpp:sourceCpp(here("cpp/stancppfcts_quarter_rita.cpp"))
+} else if (!ageprobs.flag & !quar.flag & !ageprobs.spl.flag) {
   Rcpp::sourceCpp(here("cpp/stancppfcts_simpleprev_yrinfsqt.cpp"))
 } else if (ageprobs.flag & !quar.flag & !ageprobs.spl.flag) {
   Rcpp::sourceCpp(here("cpp/stancppfcts_simpleperv_agediag_qtinfs.cpp"))
@@ -231,6 +267,25 @@ exp.prev <- lapply(1:nrow(fit.mat), function(i) prev_iter_fct(exp(infs[i, ]), d.
 ### List to array (easier to handle)
 exp.diags.arr <- simplify2array(exp.diags)
 exp.prev.arr <- simplify2array(exp.prev)
+
+### Prev.mat
+prev.mat.1995 <- rbind(
+  apply(exp.prev.arr[1, , 1, ], 1, summary.fct)[2, ],
+  apply(exp.prev.arr[1, , 2, ], 1, summary.fct)[2, ],
+  apply(exp.prev.arr[1, , 3, ], 1, summary.fct)[2, ],
+  apply(exp.prev.arr[1, , 4, ], 1, summary.fct)[2, ]
+)
+
+if (rita.flag) {
+  prev.mat.2011 <- prev.mat.1995
+} else {
+  prev.mat.2011 <- rbind(
+    apply(exp.prev.arr[65, , 1, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[65, , 2, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[65, , 3, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[65, , 4, ], 1, summary.fct)[2, ]
+  )
+}
 
 ### Expected number of CD4
 nCD4 <- apply(model$stan_data$CD4, c(1, 2), sum)
@@ -508,4 +563,5 @@ if (quar.flag) {
 # out$snaps.dist  <- snaps.dist/4
 #
 
-save(out, file = here("data/postproc_ad.RData"))
+save(out, file = here("data/postproc_adr_2011_2023.RData"))
+save(prev.mat.2011, file = here("data/inits_2011.RData"))

@@ -16,6 +16,7 @@ build_ad <- function(data, model_id = 4, data_id = 6) {
   if (model_id == 6) model.txt <- "ptens_quar_agediag1_nourep.stan"
   if (model_id == 7) model.txt <- "ptens_quar_agediag2_nourep.stan"
   if (model_id == 8) model.txt <- "ptens_quar_agediag3_nourep.stan"
+  if (model_id == 9) model.txt <- "ptens_quar_agediag1_rita.stan"
 
   spl.file.new <- here("bug/ptens_10_8.bug")
 
@@ -44,8 +45,9 @@ build_ad <- function(data, model_id = 4, data_id = 6) {
   data$ninfpars <- ncol(jagam.out$jags.data$X)
   data$S1 <- jagam.out$jags.data$S1
 
-  if (model_id %in% c(2:6)) pars_save <- c("beta", "lambda", "vardelta", "d", "alpha") ## saving age-specific intercept dx parameters
+  if (model_id %in% c(2:6)) pars_save <- c("beta", "lambda", "vardelta", "d", "delta1", "delta2", "delta3", "delta4", "alpha") ## saving age-specific intercept dx parameters
   if (model_id %in% c(8)) pars_save <- c("beta", "lambda", "lambda_d1", "lambda_d2", "lambda_d3", "lambda_d4", "d", "delta1", "delta2", "delta3", "delta4")
+  if (model_id ==9) pars_save <- c("beta", "lambda", "vardelta", "d", "delta1", "delta2", "delta3", "delta4", "delta5", "alpha") ## saving age-specific intercept dx parameters
 
   stan_model <- stan_model(file = here("stan", model.txt))
 
