@@ -16,7 +16,8 @@ library(RcppArmadillo)
 source(here("r/ad_functions.R"))
 
 ## Load results from stan model
-load(here("data/postsim_ad_1995_2023.RData"))
+load(here("data/postsim_ad_rita_2011_2023.RData"))
+# load(here("data/postsim_ad_1995_2023.RData"))
 
 ############################################################# DATA PROCESSING ####################################################################
 
@@ -261,24 +262,30 @@ if (rita.flag) {
 environment(d.mat.iter) <- environment()
 
 ## GOODNESS OF FIT
-exp.diags <- lapply(1:nrow(fit.mat), function(i) gof_iter_fct(exp(infs[i, ]), d.mat.iter(fit.mat, i, age.dx.flag = ageprobs.flag, age.dx.spl.flag = ageprobs.spl.flag, nt), model$stan_data$q, model$stan_data$init_prev, nt, nage))
-exp.prev <- lapply(1:nrow(fit.mat), function(i) prev_iter_fct(exp(infs[i, ]), d.mat.iter(fit.mat, i, age.dx.flag = ageprobs.flag, age.dx.spl.flag = ageprobs.spl.flag, nt), model$stan_data$q, model$stan_data$init_prev, nt, nage))
+exp.diags <- lapply(1:nrow(fit.mat), function(i) gof_iter_fct(exp(infs[i, ]), d.mat.iter(fit.mat, i, age.dx.flag = ageprobs.flag, age.dx.spl.flag = ageprobs.spl.flag, rita.flag, nt), model$stan_data$q, model$stan_data$init_prev, nt, nage))
+exp.prev <- lapply(1:nrow(fit.mat), function(i) prev_iter_fct(exp(infs[i, ]), d.mat.iter(fit.mat, i, age.dx.flag = ageprobs.flag, age.dx.spl.flag = ageprobs.spl.flag, rita.flag, nt), model$stan_data$q, model$stan_data$init_prev, nt, nage))
 
 ### List to array (easier to handle)
 exp.diags.arr <- simplify2array(exp.diags)
 exp.prev.arr <- simplify2array(exp.prev)
 
 ### Prev.mat
-prev.mat.1995 <- rbind(
-  apply(exp.prev.arr[1, , 1, ], 1, summary.fct)[2, ],
-  apply(exp.prev.arr[1, , 2, ], 1, summary.fct)[2, ],
-  apply(exp.prev.arr[1, , 3, ], 1, summary.fct)[2, ],
-  apply(exp.prev.arr[1, , 4, ], 1, summary.fct)[2, ]
-)
 
 if (rita.flag) {
-  prev.mat.2011 <- prev.mat.1995
+  prev.mat.2011 <- rbind(
+    apply(exp.prev.arr[1, , 1, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[1, , 2, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[1, , 3, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[1, , 4, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[1, , 5, ], 1, summary.fct)[2, ]
+  )
 } else {
+  prev.mat.1995 <- rbind(
+    apply(exp.prev.arr[1, , 1, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[1, , 2, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[1, , 3, ], 1, summary.fct)[2, ],
+    apply(exp.prev.arr[1, , 4, ], 1, summary.fct)[2, ]
+  )
   prev.mat.2011 <- rbind(
     apply(exp.prev.arr[65, , 1, ], 1, summary.fct)[2, ],
     apply(exp.prev.arr[65, , 2, ], 1, summary.fct)[2, ],
@@ -563,5 +570,5 @@ if (quar.flag) {
 # out$snaps.dist  <- snaps.dist/4
 #
 
-save(out, file = here("data/postproc_adr_2011_2023.RData"))
+save(out, file = here("data/postproc_ad_rita_2011_2023.RData"))
 save(prev.mat.2011, file = here("data/inits_2011.RData"))

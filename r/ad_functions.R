@@ -255,7 +255,7 @@ prev.fct <- function(prev.arr, state, age.st, age.end) { ## infs is a matrix wit
 
 ## Function to get output in right format
 ## For C++ functions
-d.mat.iter <- function(fit, iter, age.dx.flag, age.dx.spl.flag, nt) {
+d.mat.iter <- function(fit, iter, age.dx.flag, age.dx.spl.flag, rita.flag, nt) {
   if (!age.dx.flag) {
     d.mat <- matrix(NA, nr = 4, nc = nt)
     d.mat[1, ] <- fit[iter, d1.ind]
@@ -264,7 +264,15 @@ d.mat.iter <- function(fit, iter, age.dx.flag, age.dx.spl.flag, nt) {
     d.mat[4, ] <- fit[iter, d4.ind]
   } else {
     if (!age.dx.spl.flag) {
+     if (rita.flag) {
+      d.mat <- array(NA, dim = c(5, nt, 4))
+      d.mat[5, , 1] <- fit[iter, d5.ind.y]
+      d.mat[5, , 2] <- fit[iter, d5.ind.my]
+      d.mat[5, , 3] <- fit[iter, d5.ind.mo]
+      d.mat[5, , 4] <- fit[iter, d5.ind.o]
+    } else {
       d.mat <- array(NA, dim = c(4, nt, 4)) ## array to be consistent with gof_iter_fct in stancppfcts_simpleperv_agediag.cpp
+      }
       d.mat[1, , 1] <- fit[iter, d1.ind.y]
       d.mat[2, , 1] <- fit[iter, d2.ind.y]
       d.mat[3, , 1] <- fit[iter, d3.ind.y]
