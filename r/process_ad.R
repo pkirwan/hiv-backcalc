@@ -241,7 +241,7 @@ if (delta.flag) {
 ## Loading Rcpp functions
 ## for post-simulating the epidemics
 if (rita.flag) {
-  Rcpp:sourceCpp(here("cpp/stancppfcts_quarter_rita.cpp"))
+  Rcpp::sourceCpp(here("cpp/stancppfcts_quarter_rita.cpp"))
 } else if (!ageprobs.flag & !quar.flag & !ageprobs.spl.flag) {
   Rcpp::sourceCpp(here("cpp/stancppfcts_simpleprev_yrinfsqt.cpp"))
 } else if (ageprobs.flag & !quar.flag & !ageprobs.spl.flag) {

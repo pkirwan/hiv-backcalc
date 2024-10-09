@@ -7,23 +7,20 @@ using namespace arma;
 
 // [[Rcpp::export]]
 mat Q1_fct(const cube& d, const mat& q, int t, int a, int a0){
-  mat Q(4,4);
-  Q(0,0) =(1 - d(0,t,a)) * (1 - q(0,a0)) ;
-  Q(0,1) =(1 - d(0,t,a)) * q(0,a0) ;
-  Q(0,2) =0 ;
-  Q(0,3) =0 ;
-  Q(1,0) =0 ;
-  Q(1,1) =(1 - d(1,t,a)) * (1 - q(1,a0)) ;
-  Q(1,2) =(1 - d(1,t,a)) * q(1,a0) ;
-  Q(1,3) =0 ;
-  Q(2,0) =0 ;
-  Q(2,1) =0 ;
-  Q(2,2) =(1 - d(2,t,a)) * (1 - q(2,a0)) ;
-  Q(2,3) =(1 - d(2,t,a)) * q(2,a0) ;
-  Q(3,0) =0 ;
-  Q(3,1) =0 ;
-  Q(3,2) =0 ;
-  Q(3,3) =(1 - d(3,t,a)) * (1 - q(3,a0)) ;
+  mat Q(7,7,fill::zeros);
+  Q(0,1) =(1 - d(0,t,a)) * (1 - q(0, a0)) ;
+  Q(0,2) =(1 - d(0,t,a)) * q(0,a0) ;
+  Q(1,3) =(1 - d(0,t,a)) * (1 - q(0,a0)) ;
+  Q(1,4) =(1 - d(0,t,a)) * q(0,a0) ;
+  Q(2,4) =(1 - d(0,t,a)) * (1 - q(1,a0)) ;
+  Q(2,5) =(1 - d(0,t,a)) * q(1,a0) ;
+  Q(3,3) =(1 - d(1,t,a)) * (1 - q(0, a0)) ;
+  Q(3,4) =(1 - d(1,t,a)) * q(0, a0) ;
+  Q(4,4) =(1 - d(2,t,a)) * (1 - q(1,a0)) ;
+  Q(4,5) =(1 - d(2,t,a)) * q(1,a0) ;
+  Q(5,5) =(1 - d(3,t,a)) * (1 - q(2,a0)) ;
+  Q(5,6) =(1 - d(3,t,a)) * q(2,a0) ;
+  Q(6,6) =(1 - d(4,t,a)) * (1 - q(3,a0)) ;
   return Q;
 }
 
@@ -208,9 +205,9 @@ cube gof_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, in
 cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, int nquar, int nage){
   // Timer timer;
   
-  cube exp_diag(nquar,nage,4);
-  const vec empty_vec(5,fill::zeros);
-  const vec empty_vec1(4,fill::zeros);
+  cube exp_diag(nquar,nage,5);
+  const vec empty_vec(6,fill::zeros);
+  const vec empty_vec1(7,fill::zeros);
 
   vector<vector<vector<arma::vec> > > lat_arr(nquar, vector<vector<arma::vec> >(nage, vector<arma::vec>(nquar)));
   vector<vector<vector<arma::vec> > > lat_arr1(nquar, vector<vector<arma::vec> >(nage, vector<arma::vec>(nquar)));
@@ -219,10 +216,10 @@ cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, i
   for(int t0=0; t0<nquar; ++t0){
     for(int a0=0; a0<nage; ++a0){
       // Adding initial prevalence at t==0
-      vec diag_p(5, fill::zeros);
-      vec lat_p(4, fill::zeros);
-      vec tmp(4);
-      mat P(4,4);
+      vec diag_p(6, fill::zeros);
+      vec lat_p(7, fill::zeros);
+      vec tmp(7);
+      mat P(7,7);
       vec tmpvec(5);
       
       // This initialization step is needed
@@ -234,6 +231,9 @@ cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, i
         tmp(1) = prev(1,a0);
         tmp(2) = prev(2,a0);
         tmp(3) = prev(3,a0);
+        tmp(4) = prev(4,a0);
+        tmp(5) = prev(5,a0);
+        tmp(6) = prev(6,a0);
         
         P = Q1_fct(d, q, 0, a0, a0);
         // Progressed initial prevalence
@@ -241,11 +241,12 @@ cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, i
         //Rcpp::Rcout << "lat_p:" << std::endl << lat_p << std::endl;
         
         // Diagnosed initial prevalence
-        diag_p(0) = tmp(0) * d(0,0,a0) ;
-        diag_p(1) = tmp(1) * d(1,0,a0) ;
-        diag_p(2) = tmp(2) * d(2,0,a0) ;
-        diag_p(3) = tmp(3) * d(3,0,a0) ;
-        diag_p(4) = tmp(3) * (1-d(3,0,a0)) * q(3,a0) ;
+        diag_p(0) = (tmp(0) * d(0,0,a0)) + (tmp(1) * d(0,0,a0)) + (tmp(2) * d(0,0,a0)) ;
+        diag_p(1) = tmp(3) * d(1,0,a0) ;
+        diag_p(2) = tmp(4) * d(2,0,a0) ;
+        diag_p(3) = tmp(5) * d(3,0,a0) ;
+        diag_p(4) = tmp(6) * d(4,0,a0) ;
+        diag_p(5) = tmp(6) * (1-d(4,0,a0)) * q(3,a0) ;
         
       }
       else{ // Probably dont need this
@@ -260,6 +261,9 @@ cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, i
       lat_arr[t0][a0][t0][1] = lat_p(1) ;
       lat_arr[t0][a0][t0][2] = lat_p(2) ;
       lat_arr[t0][a0][t0][3] = lat_p(3) ;
+      lat_arr[t0][a0][t0][4] = lat_p(4) ;
+      lat_arr[t0][a0][t0][5] = lat_p(5) ;
+      lat_arr[t0][a0][t0][6] = lat_p(6) ;
       
       diag_arr[t0][a0][t0] = diag_p ; // use row_vec instead?
       
@@ -269,12 +273,12 @@ cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, i
         
         lat_arr[t][a0][t0] = P.t()* lat_arr[t-1][a0][t0];
         
-        
-        tmpvec[0] = lat_arr[t-1][a0][t0][0] * d(0,t,a) ;
-        tmpvec[1] = lat_arr[t-1][a0][t0][1] * d(1,t,a) ;
-        tmpvec[2] = lat_arr[t-1][a0][t0][2] * d(2,t,a) ;
-        tmpvec[3] = lat_arr[t-1][a0][t0][3] * d(3,t,a) ;
-        tmpvec[4] = lat_arr[t-1][a0][t0][3] * (1-d(3,t,a)) * q(3,a0) ;
+        tmpvec[0] = (lat_arr[t-1][a0][t0][0] * d(0,t,a)) + (lat_arr[t-1][a0][t0][1] * d(0,t,a)) + (lat_arr[t-1][a0][t0][2] * d(0,t,a)) ;
+        tmpvec[1] = lat_arr[t-1][a0][t0][3] * d(1,t,a) ;
+        tmpvec[2] = lat_arr[t-1][a0][t0][4] * d(2,t,a) ;
+        tmpvec[3] = lat_arr[t-1][a0][t0][5] * d(3,t,a) ;
+        tmpvec[4] = lat_arr[t-1][a0][t0][6] * d(4,t,a) ;
+        tmpvec[5] = lat_arr[t-1][a0][t0][6] * (1-d(4,t,a)) * q(3,a0) ;
         
         diag_arr[t][a0][t0] = tmpvec;
         
@@ -290,12 +294,14 @@ cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, i
       exp_diag(t,a,1) =  0;
       exp_diag(t,a,2) =  0;
       exp_diag(t,a,3) =  0;
+      exp_diag(t,a,4) =  0;
       
       for(int t0=0; t0<=t; ++t0){
         exp_diag(t,a,0) +=  lat_arr1[t][a][t0][0];
         exp_diag(t,a,1) +=  lat_arr1[t][a][t0][1];
         exp_diag(t,a,2) +=  lat_arr1[t][a][t0][2];
         exp_diag(t,a,3) +=  lat_arr1[t][a][t0][3];
+        exp_diag(t,a,4) +=  lat_arr1[t][a][t0][4];
       }
       
     }
