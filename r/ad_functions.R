@@ -1,7 +1,6 @@
 ## ################# FUNCTION DEFINITIONS
 
 build_ad <- function(data, model_id = 4, data_id = 6) {
-
   # libraries
   library(mgcv)
   library(rstan)
@@ -47,7 +46,7 @@ build_ad <- function(data, model_id = 4, data_id = 6) {
 
   if (model_id %in% c(2:6)) pars_save <- c("beta", "lambda", "vardelta", "d", "delta1", "delta2", "delta3", "delta4", "alpha") ## saving age-specific intercept dx parameters
   if (model_id %in% c(8)) pars_save <- c("beta", "lambda", "lambda_d1", "lambda_d2", "lambda_d3", "lambda_d4", "d", "delta1", "delta2", "delta3", "delta4")
-  if (model_id ==9) pars_save <- c("beta", "lambda", "vardelta", "d", "delta1", "delta2", "delta3", "delta4", "delta5", "alpha") ## saving age-specific intercept dx parameters
+  if (model_id == 9) pars_save <- c("beta", "lambda", "vardelta", "d", "delta1", "delta2", "delta3", "delta4", "delta5", "alpha") ## saving age-specific intercept dx parameters
 
   stan_model <- stan_model(file = here("stan", model.txt))
 
@@ -237,14 +236,29 @@ gof.fct <- function(type = "HIV", age.st, age.end, HIV, AIDS, CD4.st1, CD4.st2, 
   apply(y, 2, summary.fct)
 }
 
+gof.fct.rita <- function(type = "HIV", age.st, age.end, HIV, AIDS, CD4.st1, CD4.st2, CD4.st3, CD4.st4, CD4.st5, nt, qt.flag) { ## infs is a matrix with log-infections for each posterior sample in each row
+  if (!type %in% c("HIV", "AIDS", "CD4.st1", "CD4.st2", "CD4.st3", "CD4.st4", "CD4.st5")) stop("Type can only be 'HIV','AIDS','CD4.st1','CD4.st2','CD4.st3','CD4.st4','CD4.st5'")
+  a1 <- age.st - 14
+  a2 <- age.end - 14
+  if (qt.flag) qt.indx <- rep(1:(nt / 4), each = 4)
+  call <- paste(type, "[,a1:a2,]", sep = "")
+  y <- t(apply(eval(parse(text = call)), 3, rowSums))
+  if (qt.flag) y <- t(apply(y, 1, function(x) tapply(x, qt.indx, sum)))
+  apply(y, 2, summary.fct)
+}
+
 ### Function to deal with EXPECTED prevalence
 prev.fct <- function(prev.arr, state, age.st, age.end) { ## infs is a matrix with log-infections for each posterior sample in each row
-  if (!state %in% c("all", 1:4)) stop("State can only be 'all' or 1:4")
+  if (!state %in% c("all", 1:7)) stop("State can only be 'all' or 1:7")
   a1 <- age.st - 14
   a2 <- age.end - 14
 
   if (state == "all") {
-    prev <- prev.arr[, , 1, ] + prev.arr[, , 2, ] + prev.arr[, , 3, ] + prev.arr[, , 4, ]
+    if (rita.flag) {
+      prev <- prev.arr[, , 1, ] + prev.arr[, , 2, ] + prev.arr[, , 3, ] + prev.arr[, , 4, ] + prev.arr[, , 5, ] + prev.arr[, , 6, ] + prev.arr[, , 7, ]
+    } else {
+      prev <- prev.arr[, , 1, ] + prev.arr[, , 2, ] + prev.arr[, , 3, ] + prev.arr[, , 4, ]
+    }
   } else {
     prev <- prev.arr[, , state, ]
   }
@@ -264,14 +278,14 @@ d.mat.iter <- function(fit, iter, age.dx.flag, age.dx.spl.flag, rita.flag, nt) {
     d.mat[4, ] <- fit[iter, d4.ind]
   } else {
     if (!age.dx.spl.flag) {
-     if (rita.flag) {
-      d.mat <- array(NA, dim = c(5, nt, 4))
-      d.mat[5, , 1] <- fit[iter, d5.ind.y]
-      d.mat[5, , 2] <- fit[iter, d5.ind.my]
-      d.mat[5, , 3] <- fit[iter, d5.ind.mo]
-      d.mat[5, , 4] <- fit[iter, d5.ind.o]
-    } else {
-      d.mat <- array(NA, dim = c(4, nt, 4)) ## array to be consistent with gof_iter_fct in stancppfcts_simpleperv_agediag.cpp
+      if (rita.flag) {
+        d.mat <- array(NA, dim = c(5, nt, 4))
+        d.mat[5, , 1] <- fit[iter, d5.ind.y]
+        d.mat[5, , 2] <- fit[iter, d5.ind.my]
+        d.mat[5, , 3] <- fit[iter, d5.ind.mo]
+        d.mat[5, , 4] <- fit[iter, d5.ind.o]
+      } else {
+        d.mat <- array(NA, dim = c(4, nt, 4)) ## array to be consistent with gof_iter_fct in stancppfcts_simpleperv_agediag.cpp
       }
       d.mat[1, , 1] <- fit[iter, d1.ind.y]
       d.mat[2, , 1] <- fit[iter, d2.ind.y]

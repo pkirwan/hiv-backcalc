@@ -12,7 +12,7 @@ rstan_options(auto_write = TRUE)
 source(here("r/ad_functions.R"))
 
 # quarterly data
-load(here("data/model_ad_rita_2011_2023_data6.RData"))
+load(here("data/model_ad_2011_2023_data6.RData"))
 
 ### Model ids
 ## 1) Ptens - qt, no age diag (standard)
@@ -25,15 +25,15 @@ load(here("data/model_ad_rita_2011_2023_data6.RData"))
 ## 8) Ptens - qt, age diag 3, no urep - splines for dx probs
 ## 9) Ptens - qt, age diag and rita: time trend - age and state specific, with rita
 
-model <- build_ad(data = stan_data, model_id = 9, data_id = 6)
+model <- build_ad(data = stan_data, model_id = 6, data_id = 6)
 
 fit <- sampling(
   object = model$stan_model,
   data = model$stan_data,
-  iter = 1000,
-  chains = 3,
+  iter = 2000,
+  chains = 4,
   pars = model$pars_save,
   control = list(adapt_delta = 0.8)
 )
 
-save(model, fit, file = here("data/postsim_ad_rita_2011_2023.RData"))
+save(model, fit, file = here("data/postsim_ad_2011_2023.RData"))

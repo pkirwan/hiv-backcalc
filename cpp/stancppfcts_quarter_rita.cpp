@@ -94,7 +94,7 @@ vector<vector<vector<arma::vec> > > a0toa_fct(const vector<vector<vector<arma::v
 cube gof_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, int nquar, int nage){
   // Timer timer;
   
-  cube exp_diag(nquar,nage,5);
+  cube exp_diag(nquar,nage,6);
   const vec empty_vec(6,fill::zeros);
   const vec empty_vec1(7,fill::zeros);
   int nagegrp = d.n_slices;
@@ -214,6 +214,7 @@ cube gof_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, in
       exp_diag(t,a,2) =  0;
       exp_diag(t,a,3) =  0;
       exp_diag(t,a,4) =  0;
+      exp_diag(t,a,5) =  0;
       
       for(int t0=0; t0<=t; ++t0){
         exp_diag(t,a,0) +=  diag_arr1[t][a][t0][0];
@@ -221,6 +222,7 @@ cube gof_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, in
         exp_diag(t,a,2) +=  diag_arr1[t][a][t0][2];
         exp_diag(t,a,3) +=  diag_arr1[t][a][t0][3];
         exp_diag(t,a,4) +=  diag_arr1[t][a][t0][4];
+        exp_diag(t,a,5) +=  diag_arr1[t][a][t0][5];
       }
       
     }
@@ -242,7 +244,7 @@ cube gof_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, in
 cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, int nquar, int nage){
   // Timer timer;
   
-  cube exp_diag(nquar,nage,5);
+  cube exp_diag(nquar,nage,7);
   const vec empty_vec(6,fill::zeros);
   const vec empty_vec1(7,fill::zeros);
   int nagegrp = d.n_slices;
@@ -346,6 +348,8 @@ cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, i
       exp_diag(t,a,2) =  0;
       exp_diag(t,a,3) =  0;
       exp_diag(t,a,4) =  0;
+      exp_diag(t,a,5) =  0;
+      exp_diag(t,a,6) =  0;
       
       for(int t0=0; t0<=t; ++t0){
         exp_diag(t,a,0) +=  lat_arr1[t][a][t0][0];
@@ -353,6 +357,8 @@ cube prev_iter_fct(const vec& H, const cube& d, const mat& q, const mat& prev, i
         exp_diag(t,a,2) +=  lat_arr1[t][a][t0][2];
         exp_diag(t,a,3) +=  lat_arr1[t][a][t0][3];
         exp_diag(t,a,4) +=  lat_arr1[t][a][t0][4];
+        exp_diag(t,a,5) +=  lat_arr1[t][a][t0][5];
+        exp_diag(t,a,6) +=  lat_arr1[t][a][t0][6];
       }
       
     }
